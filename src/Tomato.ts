@@ -83,6 +83,14 @@ export class Tomato implements Coords2D {
     this.VelocityComponent.addBonus();
   }
 
+  __debugStop() {
+    this.VelocityComponent.stop();
+  }
+
+  __debugInit() {
+    this.VelocityComponent.init();
+  }
+
   draw(context: CanvasRenderingContext2D) {
     context.drawImage(this.sprite, this.x, this.y, SPRITE_WIDTH, SPRITE_HEIGHT);
   }

@@ -1,8 +1,8 @@
 (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.HTMLRenderer = void 0;
-class HTMLRenderer {
+exports.HTMLInterface = void 0;
+class HTMLInterface {
     constructor() { }
     static update(id, content) {
         const element = document.getElementById(id);
@@ -11,8 +11,15 @@ class HTMLRenderer {
         }
         element.innerText = content;
     }
+    static getQuerySelector(query) {
+        const tag = document.querySelector(query);
+        if (!tag) {
+            throw new Error(`No Element corresponds to '${query}' on the DOM.`);
+        }
+        return tag;
+    }
 }
-exports.HTMLRenderer = HTMLRenderer;
+exports.HTMLInterface = HTMLInterface;
 
 },{}],2:[function(require,module,exports){
 "use strict";
@@ -29,16 +36,16 @@ class Player {
     init() {
         this._ammo = constants_1.INITIAL_AMMO;
         this._score = 0;
-        HtmlRenderer_1.HTMLRenderer.update('score', String(this._score));
-        HtmlRenderer_1.HTMLRenderer.update('ammo', String(this._ammo));
+        HtmlRenderer_1.HTMLInterface.update('score', String(this._score));
+        HtmlRenderer_1.HTMLInterface.update('ammo', String(this._ammo));
     }
     hit(points) {
         this._score += points;
-        HtmlRenderer_1.HTMLRenderer.update('score', String(this._score));
+        HtmlRenderer_1.HTMLInterface.update('score', String(this._score));
     }
     shoot() {
         this._ammo -= 1;
-        HtmlRenderer_1.HTMLRenderer.update('ammo', String(this._ammo));
+        HtmlRenderer_1.HTMLInterface.update('ammo', String(this._ammo));
     }
     get score() {
         return this._score;
@@ -140,6 +147,12 @@ class Tomato {
     increaseVelocity() {
         this.VelocityComponent.addBonus();
     }
+    __debugStop() {
+        this.VelocityComponent.stop();
+    }
+    __debugInit() {
+        this.VelocityComponent.init();
+    }
     draw(context) {
         context.drawImage(this.sprite, this.x, this.y, constants_1.SPRITE_WIDTH, constants_1.SPRITE_HEIGHT);
     }
@@ -224,30 +237,23 @@ let isPlaying = false;
     document.getElementById('play-btn').disabled = true;
     play();
 });
-main();
 function main() {
-    HtmlRenderer_1.HTMLRenderer.update('ammo', String(constants_1.INITIAL_AMMO));
+    HtmlRenderer_1.HTMLInterface.update('ammo', String(constants_1.INITIAL_AMMO));
     initCanvasListener();
     const context = getContext();
     context.fillStyle = 'black';
     gameLoop(context);
 }
+main();
 function isOverlapping(mouse, tomato) {
     return mouse.x >= tomato.x && mouse.x <= tomato.x + constants_1.SPRITE_WIDTH && mouse.y >= tomato.y && mouse.y <= tomato.y + constants_1.SPRITE_HEIGHT;
 }
 function getMouseRelativeToCanvas(mouse) {
-    const canvas = getCanvas();
+    const canvas = HtmlRenderer_1.HTMLInterface.getQuerySelector('canvas');
     const canvasBox = canvas.getBoundingClientRect();
     const mouseX = mouse.clientX - canvasBox.x;
     const mouseY = mouse.clientY - canvasBox.y;
     return { x: mouseX, y: mouseY };
-}
-function getCanvas() {
-    const canvas = document.querySelector('canvas');
-    if (!canvas) {
-        throw new Error('No Canvas tag on the page');
-    }
-    return canvas;
 }
 function play() {
     tomato.init();
@@ -255,11 +261,10 @@ function play() {
     isPlaying = true;
 }
 function initCanvasListener() {
-    const canvas = getCanvas();
+    const canvas = HtmlRenderer_1.HTMLInterface.getQuerySelector('canvas');
     canvas.addEventListener('click', (event) => {
         if (player.canShoot() && isPlaying) {
             player.shoot();
-            console.log(tomato);
             const mouseCoords = getMouseRelativeToCanvas(event);
             const tomatoCoords = tomato.getCoords();
             if (isOverlapping(mouseCoords, tomatoCoords)) {
@@ -275,13 +280,13 @@ function initCanvasListener() {
         if (!player.canShoot()) {
             tomato.stop();
             isPlaying = false;
-            HtmlRenderer_1.HTMLRenderer.update('b-score', String(Math.max(player.score, player.bestScore)));
+            HtmlRenderer_1.HTMLInterface.update('b-score', String(Math.max(player.score, player.bestScore)));
             document.getElementById('play-btn').disabled = false;
         }
     });
 }
 function getContext() {
-    const canvas = getCanvas();
+    const canvas = HtmlRenderer_1.HTMLInterface.getQuerySelector('canvas');
     const context = canvas.getContext("2d");
     if (!context) {
         throw new Error("context not available");

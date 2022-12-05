@@ -50,6 +50,7 @@ function initCanvasListener() {
       player.shoot();
       const mouseCoords = getMouseRelativeToCanvas(event);
       const tomatoCoords = tomato.getCoords();
+
       if (isOverlapping(mouseCoords, tomatoCoords)) {
         player.hit(1);
         tomato.increaseVelocity();
