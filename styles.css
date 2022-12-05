@@ -1,0 +1,26 @@
+.centered {
+  text-align: center;
+}
+
+canvas {
+  cursor: crosshair;
+}
+
+button {
+  margin-top: 20px;
+  cursor: pointer;
+  padding: 20px 30px;
+  font-weight: 700;
+  font-size: 22px;
+  border-radius: 10px;
+  border: none;
+  background-color: green;
+  color: white;
+}
+
+button:disabled {
+  cursor: unset;
+  background-color: grey;
+  color: black;
+  opacity: 0.9;
+}

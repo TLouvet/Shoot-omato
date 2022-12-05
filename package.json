@@ -1,0 +1,12 @@
+{
+  "scripts": {
+    "build": "yarn tsc && browserify ./dist/index.js -o index.js"
+  },
+  "devDependencies": {
+    "typescript": "^4.9.3"
+  },
+  "dependencies": {
+    "browserify": "^17.0.0",
+    "sass": "^1.56.1"
+  }
+}

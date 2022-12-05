@@ -1,0 +1,20 @@
+export class HTMLInterface {
+  private constructor() { }
+
+  static update(id: string, content: string) {
+    const element = document.getElementById(id);
+    if (!element) {
+      throw new Error(`Error: Element with id ${id} not found`);
+    }
+
+    element.innerText = content;
+  }
+
+  static getQuerySelector(query: string) {
+    const tag = document.querySelector(query);
+    if (!tag) {
+      throw new Error(`No Element corresponds to '${query}' on the DOM.`);
+    }
+    return tag;
+  }
+}
