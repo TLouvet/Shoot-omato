@@ -1,5 +1,6 @@
 import { FAIL_SOUND, HIT_SOUND, INITIAL_AMMO, SPRITE_HEIGHT, SPRITE_WIDTH } from "./constants";
 import { HTMLInterface } from "./HtmlRenderer";
+import { FPSMonitor } from "./Monitor";
 import { Player } from "./Player";
 import { SoundManager } from "./SoundManager";
 import { Tomato } from "./Tomato";
@@ -8,6 +9,8 @@ import { Coords2D } from "./types";
 const tomato = new Tomato();
 const player = new Player();
 let isPlaying = false;
+
+let then = Date.now();
 
 document.getElementById('play-btn')?.addEventListener('click', () => {
   (document.getElementById('play-btn') as HTMLButtonElement).disabled = true;
@@ -80,8 +83,13 @@ function getContext() {
 }
 
 function gameLoop(context: CanvasRenderingContext2D) {
-  context!.fillRect(0, 0, 800, 600);
-  tomato.move();
-  tomato.draw(context as CanvasRenderingContext2D); // Not sure about this one
+  const now = Date.now();
+  const elapsedTime = now - then;
+  if (elapsedTime >= FPSMonitor.Interval) {
+    then = now - (elapsedTime % (FPSMonitor.Interval));
+    context!.fillRect(0, 0, 800, 600);
+    tomato.move();
+    tomato.draw(context as CanvasRenderingContext2D);
+  }
   window.requestAnimationFrame(() => gameLoop(context));
 }

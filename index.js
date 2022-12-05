@@ -23,6 +23,37 @@ exports.HTMLInterface = HTMLInterface;
 
 },{}],2:[function(require,module,exports){
 "use strict";
+var _a;
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.FPSMonitor = void 0;
+class FPSMonitor {
+    constructor() { }
+    /**
+     * Display FPS in console each second
+     */
+    static logFPSInterval() {
+        const intervalId = setInterval(() => {
+            console.log("fps", this.fpsCount);
+            this.fpsCount = Math.max(0, this.fpsCount - this._FPS);
+        }, 1000);
+        return intervalId;
+    }
+    static get FPSGoal() {
+        return this._FPS;
+    }
+    static get Interval() {
+        return this._INTERVAL;
+    }
+}
+exports.FPSMonitor = FPSMonitor;
+_a = FPSMonitor;
+FPSMonitor.fpsCount = 0;
+FPSMonitor._FPS = 60;
+FPSMonitor._TOLERANCE_DELAY = 0.1;
+FPSMonitor._INTERVAL = (1000 / _a._FPS) + _a._TOLERANCE_DELAY;
+
+},{}],3:[function(require,module,exports){
+"use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Player = void 0;
 const constants_1 = require("./constants");
@@ -62,7 +93,7 @@ class Player {
 }
 exports.Player = Player;
 
-},{"./HtmlRenderer":1,"./constants":6}],3:[function(require,module,exports){
+},{"./HtmlRenderer":1,"./constants":7}],4:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SoundManager = void 0;
@@ -81,7 +112,7 @@ exports.SoundManager = SoundManager;
 SoundManager.player = new Audio();
 SoundManager.isPlaying = false;
 
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Tomato = void 0;
@@ -159,7 +190,7 @@ class Tomato {
 }
 exports.Tomato = Tomato;
 
-},{"./components/SpeedComponent":5,"./constants":6}],5:[function(require,module,exports){
+},{"./components/SpeedComponent":6,"./constants":7}],6:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SpeedComponent = void 0;
@@ -206,7 +237,7 @@ class SpeedComponent {
 }
 exports.SpeedComponent = SpeedComponent;
 
-},{"../constants":6}],6:[function(require,module,exports){
+},{"../constants":7}],7:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.HIT_SOUND = exports.FAIL_SOUND = exports.INITIAL_AMMO = exports.DEFAULT_VELOCITY_BONUS = exports.MINIMUM_SPEED = exports.TOMATO_IMAGE_URL = exports.SPRITE_HEIGHT = exports.SPRITE_WIDTH = exports.SCREEN_HEIGHT = exports.SCREEN_WIDTH = void 0;
@@ -215,24 +246,26 @@ exports.SCREEN_HEIGHT = 600;
 exports.SPRITE_WIDTH = 64;
 exports.SPRITE_HEIGHT = 64;
 exports.TOMATO_IMAGE_URL = './assets/tomato.png';
-exports.MINIMUM_SPEED = 1;
+exports.MINIMUM_SPEED = 5;
 exports.DEFAULT_VELOCITY_BONUS = 0.5;
 exports.INITIAL_AMMO = 10;
 exports.FAIL_SOUND = "./assets/issou-el-risitas.mp3";
 exports.HIT_SOUND = "./assets/hit.mp3";
 
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 "use strict";
 var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 const constants_1 = require("./constants");
 const HtmlRenderer_1 = require("./HtmlRenderer");
+const Monitor_1 = require("./Monitor");
 const Player_1 = require("./Player");
 const SoundManager_1 = require("./SoundManager");
 const Tomato_1 = require("./Tomato");
 const tomato = new Tomato_1.Tomato();
 const player = new Player_1.Player();
 let isPlaying = false;
+let then = Date.now();
 (_a = document.getElementById('play-btn')) === null || _a === void 0 ? void 0 : _a.addEventListener('click', () => {
     document.getElementById('play-btn').disabled = true;
     play();
@@ -294,10 +327,15 @@ function getContext() {
     return context;
 }
 function gameLoop(context) {
-    context.fillRect(0, 0, 800, 600);
-    tomato.move();
-    tomato.draw(context); // Not sure about this one
+    const now = Date.now();
+    const elapsedTime = now - then;
+    if (elapsedTime >= Monitor_1.FPSMonitor.Interval) {
+        then = now - (elapsedTime % (Monitor_1.FPSMonitor.Interval));
+        context.fillRect(0, 0, 800, 600);
+        tomato.move();
+        tomato.draw(context);
+    }
     window.requestAnimationFrame(() => gameLoop(context));
 }
 
-},{"./HtmlRenderer":1,"./Player":2,"./SoundManager":3,"./Tomato":4,"./constants":6}]},{},[7]);
+},{"./HtmlRenderer":1,"./Monitor":2,"./Player":3,"./SoundManager":4,"./Tomato":5,"./constants":7}]},{},[8]);
