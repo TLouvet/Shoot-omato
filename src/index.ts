@@ -1,4 +1,4 @@
-import { FAIL_SOUND, HIT_SOUND, INITIAL_AMMO, SPRITE_HEIGHT, SPRITE_WIDTH } from "./constants";
+import { FAIL_SOUND, HIT_SOUND, SPRITE_HEIGHT, SPRITE_WIDTH } from "./constants";
 import { HTMLInterface } from "./HtmlRenderer";
 import { FPSMonitor } from "./Monitor";
 import { Player } from "./Player";
@@ -10,7 +10,8 @@ const tomato = new Tomato();
 const player = new Player();
 let isPlaying = false;
 
-let then = Date.now();
+// let then = Date.now();
+let lastTime = 0;
 
 document.getElementById('play-btn')?.addEventListener('click', () => {
   (document.getElementById('play-btn') as HTMLButtonElement).disabled = true;
@@ -18,11 +19,10 @@ document.getElementById('play-btn')?.addEventListener('click', () => {
 })
 
 function main() {
-  HTMLInterface.update('ammo', String(INITIAL_AMMO));
   initCanvasListener();
   const context = getContext()
   context.fillStyle = 'black';
-  gameLoop(context);
+  gameLoop(context, 0);
 }
 
 main();
@@ -49,26 +49,25 @@ function initCanvasListener() {
   const canvas = HTMLInterface.getQuerySelector('canvas') as HTMLCanvasElement;
   canvas.addEventListener('click', (event) => {
 
-    if (player.canShoot() && isPlaying) {
-      player.shoot();
+    if (isPlaying && tomato.canBeHit) {
       const mouseCoords = getMouseRelativeToCanvas(event);
       const tomatoCoords = tomato.getCoords();
 
       if (isOverlapping(mouseCoords, tomatoCoords)) {
-        player.hit(1);
-        tomato.increaseVelocity();
+        const { velX, velY } = tomato.getVelocity();
+        const score = Math.max(1, Math.abs(velX)) * Math.max(1, Math.abs(velY));
+        player.hit(score);
+        tomato.takeHit();
         SoundManager.play(HIT_SOUND);
       } else {
+        player.resetCombo();
+        tomato.stop();
+        isPlaying = false;
+        player.setBestScore();
+        HTMLInterface.update('b-score', String(Math.max(player.score, player.bestScore)));
+        (document.getElementById('play-btn') as HTMLButtonElement).disabled = false;
         SoundManager.play(FAIL_SOUND);
       }
-    }
-
-    // Must verify after -- probably should be reorganized
-    if (!player.canShoot()) {
-      tomato.stop();
-      isPlaying = false;
-      HTMLInterface.update('b-score', String(Math.max(player.score, player.bestScore)));
-      (document.getElementById('play-btn') as HTMLButtonElement).disabled = false;
     }
   })
 }
@@ -82,14 +81,25 @@ function getContext() {
   return context;
 }
 
-function gameLoop(context: CanvasRenderingContext2D) {
-  const now = Date.now();
-  const elapsedTime = now - then;
-  if (elapsedTime >= FPSMonitor.Interval) {
-    then = now - (elapsedTime % (FPSMonitor.Interval));
-    context!.fillRect(0, 0, 800, 600);
-    tomato.move();
-    tomato.draw(context as CanvasRenderingContext2D);
+function gameLoop(context: CanvasRenderingContext2D, time: number) {
+  // const now = Date.now();
+  // const elapsedTime = now - then;
+  // if (elapsedTime >= FPSMonitor.Interval) {
+  //   console.log(elapsedTime);
+  //   then = now - (elapsedTime % (FPSMonitor.Interval));
+  //   context!.fillRect(0, 0, 800, 600);
+  //   tomato.move(elapsedTime);
+  //   tomato.draw(context as CanvasRenderingContext2D);
+  // }
+  if (lastTime != null) {
+    const delta = time - lastTime;
+    // Seulement si delta > FPS.INTERVAL (1000/60) + 0.1
+    if (delta >= FPSMonitor.MaxFPSInterval) {
+      context!.fillRect(0, 0, 800, 600);
+      tomato.move(delta);
+      tomato.draw(context as CanvasRenderingContext2D);
+      lastTime = time;
+    }
   }
-  window.requestAnimationFrame(() => gameLoop(context));
+  window.requestAnimationFrame((time) => gameLoop(context, time));
 }

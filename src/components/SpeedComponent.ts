@@ -26,11 +26,24 @@ export class SpeedComponent implements Velocity {
     return Math.min(-this.MinimumVelocity, -this.MaximumVelocity);
   }
 
-  changeVel(vel: keyof Velocity) {
+  inverseVel(vel: keyof Velocity) {
     if (this[vel] < 0) {
       this[vel] = Math.max(this.MinimumVelocity, this.MaximumVelocity);
     } else {
       this[vel] = Math.min(-this.MinimumVelocity, -this.MaximumVelocity);
+    }
+  }
+
+  accelerate() {
+    this.updateVel('velX');
+    this.updateVel('velY');
+  }
+
+  private updateVel(vel: keyof Velocity) {
+    if (this[vel] < 0) {
+      this[vel] = Math.min(-this.MinimumVelocity, -this.MaximumVelocity);
+    } else {
+      this[vel] = Math.max(this.MinimumVelocity, this.MaximumVelocity);
     }
   }
 
@@ -39,7 +52,11 @@ export class SpeedComponent implements Velocity {
   }
 
   private get MaximumVelocity() {
-    return Math.random() * 3 + this.velocityBonus;
+    return this.MinimumVelocity + Math.random() * 0.5;
+  }
+
+  getValues(): Velocity {
+    return { velX: this.velX, velY: this.velY };
   }
 
   addBonus() {

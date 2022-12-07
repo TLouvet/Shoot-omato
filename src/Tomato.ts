@@ -1,4 +1,4 @@
-import { SCREEN_HEIGHT, SCREEN_WIDTH, SPRITE_HEIGHT, SPRITE_WIDTH, TOMATO_IMAGE_URL } from "./constants";
+import { DEFAULT_INVINCIBLE_TIME, SCREEN_HEIGHT, SCREEN_WIDTH, SPRITE_HEIGHT, SPRITE_WIDTH, TOMATO_IMAGE_URL } from "./constants";
 import { SpeedComponent } from "./components/SpeedComponent";
 import { Coords2D } from "./types";
 
@@ -7,12 +7,14 @@ export class Tomato implements Coords2D {
   x!: number;
   y!: number;
   private VelocityComponent: SpeedComponent;
+  private _canBeHit: boolean;
 
   constructor() {
     this.sprite = new Image();
     this.sprite.src = TOMATO_IMAGE_URL;
     this.centerOnScreen();
     this.VelocityComponent = new SpeedComponent();
+    this._canBeHit = true;
   }
 
   private centerOnScreen() {
@@ -34,29 +36,42 @@ export class Tomato implements Coords2D {
     this.VelocityComponent.stop();
   }
 
-  move() {
-    this.x += this.VelocityComponent.velX;
-    this.y += this.VelocityComponent.velY;
+  move(elapsedTime: number) {
+    this.x += this.VelocityComponent.velX * elapsedTime; // keep constant even if framerate changes
+    this.y += this.VelocityComponent.velY * elapsedTime;
 
     if (this.collideX()) {
       this.x = 0;
-      this.VelocityComponent.changeVel("velX");
+      this.VelocityComponent.inverseVel("velX");
     }
 
     if (this.collideW()) {
       this.x = SCREEN_WIDTH - SPRITE_WIDTH;
-      this.VelocityComponent.changeVel("velX");
+      this.VelocityComponent.inverseVel("velX");
     }
 
     if (this.collideY()) {
       this.y = 0;
-      this.VelocityComponent.changeVel("velY");
+      this.VelocityComponent.inverseVel("velY");
     }
 
     if (this.collideH()) {
       this.y = SCREEN_HEIGHT - SPRITE_HEIGHT;
-      this.VelocityComponent.changeVel("velY");
+      this.VelocityComponent.inverseVel("velY");
     }
+  }
+
+  get canBeHit() {
+    return this._canBeHit;
+  }
+
+  takeHit() {
+    this.VelocityComponent.addBonus();
+    this.VelocityComponent.accelerate();
+    this._canBeHit = false;
+    setTimeout(() => {
+      this._canBeHit = true;
+    }, DEFAULT_INVINCIBLE_TIME);
   }
 
   private collideX() {
@@ -79,8 +94,8 @@ export class Tomato implements Coords2D {
     return { x: this.x, y: this.y };
   }
 
-  increaseVelocity() {
-    this.VelocityComponent.addBonus();
+  getVelocity() {
+    return this.VelocityComponent.getValues();
   }
 
   __debugStop() {
@@ -92,6 +107,9 @@ export class Tomato implements Coords2D {
   }
 
   draw(context: CanvasRenderingContext2D) {
+    if (!this.canBeHit) {
+      return;
+    }
     context.drawImage(this.sprite, this.x, this.y, SPRITE_WIDTH, SPRITE_HEIGHT);
   }
 }
