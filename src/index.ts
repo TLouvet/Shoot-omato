@@ -55,7 +55,7 @@ function initCanvasListener() {
 
       if (isOverlapping(mouseCoords, tomatoCoords)) {
         const { velX, velY } = tomato.getVelocity();
-        const score = Math.max(1, Math.abs(velX)) * Math.max(1, Math.abs(velY));
+        const score = ((1 + Math.abs(velX)) * (1 + Math.abs(velY))) * 10;
         player.hit(score);
         tomato.takeHit();
         SoundManager.play(HIT_SOUND);

@@ -28,15 +28,22 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.FPSMonitor = void 0;
 class FPSMonitor {
     constructor() { }
-    /**
-     * Display FPS in console each second
-     */
     static logFPSInterval() {
-        const intervalId = setInterval(() => {
+        if (this.isLoggingInterval) {
+            return;
+        }
+        this.isLoggingInterval = true;
+        this.intervalId = setInterval(() => {
             console.log("fps", this.fpsCount);
             this.fpsCount = Math.max(0, this.fpsCount - this._FPS);
         }, 1000);
-        return intervalId;
+    }
+    static removeFPSLog() {
+        if (!this.intervalId) {
+            return;
+        }
+        clearInterval(this.intervalId);
+        this.intervalId = null;
     }
     static get FPSGoal() {
         return this._FPS;
@@ -51,6 +58,7 @@ FPSMonitor.fpsCount = 0;
 FPSMonitor._FPS = 60;
 FPSMonitor._TOLERANCE_DELAY = 0.1;
 FPSMonitor._INTERVAL = (1000 / _a._FPS) + _a._TOLERANCE_DELAY;
+FPSMonitor.isLoggingInterval = false;
 
 },{}],3:[function(require,module,exports){
 "use strict";
@@ -328,7 +336,7 @@ function initCanvasListener() {
             const tomatoCoords = tomato.getCoords();
             if (isOverlapping(mouseCoords, tomatoCoords)) {
                 const { velX, velY } = tomato.getVelocity();
-                const score = Math.max(1, Math.abs(velX)) * Math.max(1, Math.abs(velY));
+                const score = ((1 + Math.abs(velX)) * (1 + Math.abs(velY))) * 10;
                 player.hit(score);
                 tomato.takeHit();
                 SoundManager_1.SoundManager.play(constants_1.HIT_SOUND);
