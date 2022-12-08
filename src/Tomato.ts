@@ -1,30 +1,29 @@
-import { DEFAULT_INVINCIBLE_TIME, SCREEN_HEIGHT, SCREEN_WIDTH, SPRITE_HEIGHT, SPRITE_WIDTH, TOMATO_IMAGE_URL } from "./constants";
+import { SCREEN_HEIGHT, SCREEN_WIDTH } from "./constants";
 import { SpeedComponent } from "./components/SpeedComponent";
-import { Coords2D } from "./types";
+import { CoordsComponent } from "./components/CoordsComponent";
+import { CollisionBox } from "./components/CollisionBox";
+import { Drawable } from "./types";
 
-export class Tomato implements Coords2D {
-  private sprite: HTMLImageElement;
-  x!: number;
-  y!: number;
+export class Tomato implements Drawable {
+  sprite: HTMLImageElement;
   private VelocityComponent: SpeedComponent;
-  private _canBeHit: boolean;
+  private CoordsComponent: CoordsComponent;
+  private CollisionBox: CollisionBox;
 
-  constructor() {
+  constructor(width: number, height: number) {
     this.sprite = new Image();
-    this.sprite.src = TOMATO_IMAGE_URL;
-    this.centerOnScreen();
     this.VelocityComponent = new SpeedComponent();
-    this._canBeHit = true;
-  }
-
-  private centerOnScreen() {
-    this.x = (SCREEN_WIDTH / 2) - (SPRITE_WIDTH / 2);
-    this.y = (SCREEN_HEIGHT / 2) - (SPRITE_HEIGHT / 2);
+    this.CoordsComponent = new CoordsComponent(width, height);
+    this.CollisionBox = new CollisionBox(this.CoordsComponent);
   }
 
   init() {
-    this.centerOnScreen();
+    this.CoordsComponent.centerOnScreen();
     this.VelocityComponent.init();
+  }
+
+  setSpriteSource(src: string) {
+    this.sprite.src = src;
   }
 
   setInitialVel() {
@@ -32,84 +31,75 @@ export class Tomato implements Coords2D {
   }
 
   stop() {
-    this.centerOnScreen();
+    this.CoordsComponent.centerOnScreen();
     this.VelocityComponent.stop();
   }
 
   move(elapsedTime: number) {
-    this.x += this.VelocityComponent.velX * elapsedTime; // keep constant even if framerate changes
-    this.y += this.VelocityComponent.velY * elapsedTime;
-
-    if (this.collideX()) {
-      this.x = 0;
-      this.VelocityComponent.inverseVel("velX");
-    }
-
-    if (this.collideW()) {
-      this.x = SCREEN_WIDTH - SPRITE_WIDTH;
-      this.VelocityComponent.inverseVel("velX");
-    }
-
-    if (this.collideY()) {
-      this.y = 0;
-      this.VelocityComponent.inverseVel("velY");
-    }
-
-    if (this.collideH()) {
-      this.y = SCREEN_HEIGHT - SPRITE_HEIGHT;
-      this.VelocityComponent.inverseVel("velY");
-    }
+    const { xPosition, yPosition } = this.getUpdatedPositionValues(elapsedTime);
+    this.CoordsComponent.updateOnMove(xPosition, yPosition);
+    this.handleCollisions();
   }
 
-  get canBeHit() {
-    return this._canBeHit;
+  private getUpdatedPositionValues(elapsedTime: number) {
+    const { x, y } = this.CoordsComponent.getBounds();
+    const { velX, velY } = this.VelocityComponent.getValues();
+    const xPosition = x + velX * elapsedTime;
+    const yPosition = y + velY * elapsedTime;
+    return { xPosition, yPosition };
   }
 
   takeHit() {
     this.VelocityComponent.addBonus();
     this.VelocityComponent.accelerate();
-    this._canBeHit = false;
-    setTimeout(() => {
-      this._canBeHit = true;
-    }, DEFAULT_INVINCIBLE_TIME);
+    this.CollisionBox.handleHit();
   }
 
-  private collideX() {
-    return this.x <= 0;
+  private handleCollisions() {
+    this.onHorizontalCollision();
+    this.onVerticalCollision();
   }
 
-  private collideW() {
-    return this.x + SPRITE_WIDTH >= SCREEN_WIDTH;
+  private onHorizontalCollision() {
+    if (!this.CollisionBox.collideXAxis()) {
+      return;
+    }
+
+    const correctedX = this.CoordsComponent.x <= 0 ? 0 : SCREEN_WIDTH - this.CoordsComponent.width;
+    this.VelocityComponent.inverseVel("velX");
+    this.CoordsComponent.setX(correctedX);
   }
 
-  private collideY() {
-    return this.y <= 0;
+  private onVerticalCollision() {
+    if (!this.CollisionBox.collideYAxis()) {
+      return;
+    }
+
+    const correctedY = this.CoordsComponent.y <= 0 ? 0 : SCREEN_HEIGHT - this.CoordsComponent.height;
+    this.VelocityComponent.inverseVel("velY");
+    this.CoordsComponent.setY(correctedY);
   }
 
-  private collideH() {
-    return this.y + SPRITE_HEIGHT >= SCREEN_HEIGHT;
+  canBeHit() {
+    return this.CollisionBox.canBeHit;
   }
 
-  getCoords() {
-    return { x: this.x, y: this.y };
+  getBounds() {
+    return this.CoordsComponent.getBounds();
   }
 
   getVelocity() {
     return this.VelocityComponent.getValues();
   }
 
-  __debugStop() {
-    this.VelocityComponent.stop();
-  }
-
-  __debugInit() {
-    this.VelocityComponent.init();
-  }
-
-  draw(context: CanvasRenderingContext2D) {
-    if (!this.canBeHit) {
-      return;
+  getDrawInformations() {
+    return {
+      sprite: this.sprite,
+      x: this.CoordsComponent.x,
+      y: this.CoordsComponent.y,
+      width: this.CoordsComponent.width,
+      height: this.CoordsComponent.height,
+      canDraw: this.CollisionBox.canBeHit
     }
-    context.drawImage(this.sprite, this.x, this.y, SPRITE_WIDTH, SPRITE_HEIGHT);
   }
 }

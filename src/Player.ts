@@ -1,4 +1,4 @@
-import { HTMLInterface } from "./HtmlRenderer";
+import { HTMLInterface } from "./HtmlInterface";
 
 export class Player {
   private _score: number;

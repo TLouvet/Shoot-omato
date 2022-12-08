@@ -8,6 +8,7 @@ export class FPSMonitor {
 
   private constructor() { }
 
+  // Quite useless atm as fpscount is never updated
   static logFPSInterval() {
     if (this.isLoggingInterval) {
       return;

@@ -28,6 +28,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.FPSMonitor = void 0;
 class FPSMonitor {
     constructor() { }
+    // Quite useless atm as fpscount is never updated
     static logFPSInterval() {
         if (this.isLoggingInterval) {
             return;
@@ -64,7 +65,7 @@ FPSMonitor.isLoggingInterval = false;
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Player = void 0;
-const HtmlRenderer_1 = require("./HtmlRenderer");
+const HtmlInterface_1 = require("./HtmlInterface");
 class Player {
     constructor() {
         this._score = 0;
@@ -74,17 +75,17 @@ class Player {
     init() {
         this._score = 0;
         this._combo = 1;
-        HtmlRenderer_1.HTMLInterface.update('score', String(this._score));
+        HtmlInterface_1.HTMLInterface.update('score', String(this._score));
     }
     hit(points) {
         this._score += Math.round(points * this._combo);
         this._combo++;
-        HtmlRenderer_1.HTMLInterface.update('score', String(this._score));
-        HtmlRenderer_1.HTMLInterface.update('combo', String(this._combo));
+        HtmlInterface_1.HTMLInterface.update('score', String(this._score));
+        HtmlInterface_1.HTMLInterface.update('combo', String(this._combo));
     }
     resetCombo() {
         this._combo = 1;
-        HtmlRenderer_1.HTMLInterface.update('combo', String(this._combo));
+        HtmlInterface_1.HTMLInterface.update('combo', String(this._combo));
     }
     get score() {
         return this._score;
@@ -98,7 +99,7 @@ class Player {
 }
 exports.Player = Player;
 
-},{"./HtmlRenderer":1}],4:[function(require,module,exports){
+},{"./HtmlInterface":1}],4:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SoundManager = void 0;
@@ -123,94 +124,170 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Tomato = void 0;
 const constants_1 = require("./constants");
 const SpeedComponent_1 = require("./components/SpeedComponent");
+const CoordsComponent_1 = require("./components/CoordsComponent");
+const CollisionBox_1 = require("./components/CollisionBox");
 class Tomato {
-    constructor() {
+    constructor(width, height) {
         this.sprite = new Image();
-        this.sprite.src = constants_1.TOMATO_IMAGE_URL;
-        this.centerOnScreen();
         this.VelocityComponent = new SpeedComponent_1.SpeedComponent();
-        this._canBeHit = true;
-    }
-    centerOnScreen() {
-        this.x = (constants_1.SCREEN_WIDTH / 2) - (constants_1.SPRITE_WIDTH / 2);
-        this.y = (constants_1.SCREEN_HEIGHT / 2) - (constants_1.SPRITE_HEIGHT / 2);
+        this.CoordsComponent = new CoordsComponent_1.CoordsComponent(width, height);
+        this.CollisionBox = new CollisionBox_1.CollisionBox(this.CoordsComponent);
     }
     init() {
-        this.centerOnScreen();
+        this.CoordsComponent.centerOnScreen();
         this.VelocityComponent.init();
+    }
+    setSpriteSource(src) {
+        this.sprite.src = src;
     }
     setInitialVel() {
         this.VelocityComponent.setInitialVel();
     }
     stop() {
-        this.centerOnScreen();
+        this.CoordsComponent.centerOnScreen();
         this.VelocityComponent.stop();
     }
     move(elapsedTime) {
-        this.x += this.VelocityComponent.velX * elapsedTime; // keep constant even if framerate changes
-        this.y += this.VelocityComponent.velY * elapsedTime;
-        if (this.collideX()) {
-            this.x = 0;
-            this.VelocityComponent.inverseVel("velX");
-        }
-        if (this.collideW()) {
-            this.x = constants_1.SCREEN_WIDTH - constants_1.SPRITE_WIDTH;
-            this.VelocityComponent.inverseVel("velX");
-        }
-        if (this.collideY()) {
-            this.y = 0;
-            this.VelocityComponent.inverseVel("velY");
-        }
-        if (this.collideH()) {
-            this.y = constants_1.SCREEN_HEIGHT - constants_1.SPRITE_HEIGHT;
-            this.VelocityComponent.inverseVel("velY");
-        }
+        const { xPosition, yPosition } = this.getUpdatedPositionValues(elapsedTime);
+        this.CoordsComponent.updateOnMove(xPosition, yPosition);
+        this.handleCollisions();
     }
-    get canBeHit() {
-        return this._canBeHit;
+    getUpdatedPositionValues(elapsedTime) {
+        const { x, y } = this.CoordsComponent.getBounds();
+        const { velX, velY } = this.VelocityComponent.getValues();
+        const xPosition = x + velX * elapsedTime;
+        const yPosition = y + velY * elapsedTime;
+        return { xPosition, yPosition };
     }
     takeHit() {
         this.VelocityComponent.addBonus();
         this.VelocityComponent.accelerate();
+        this.CollisionBox.handleHit();
+    }
+    handleCollisions() {
+        this.onHorizontalCollision();
+        this.onVerticalCollision();
+    }
+    onHorizontalCollision() {
+        if (!this.CollisionBox.collideXAxis()) {
+            return;
+        }
+        const correctedX = this.CoordsComponent.x <= 0 ? 0 : constants_1.SCREEN_WIDTH - this.CoordsComponent.width;
+        this.VelocityComponent.inverseVel("velX");
+        this.CoordsComponent.setX(correctedX);
+    }
+    onVerticalCollision() {
+        if (!this.CollisionBox.collideYAxis()) {
+            return;
+        }
+        const correctedY = this.CoordsComponent.y <= 0 ? 0 : constants_1.SCREEN_HEIGHT - this.CoordsComponent.height;
+        this.VelocityComponent.inverseVel("velY");
+        this.CoordsComponent.setY(correctedY);
+    }
+    canBeHit() {
+        return this.CollisionBox.canBeHit;
+    }
+    getBounds() {
+        return this.CoordsComponent.getBounds();
+    }
+    getVelocity() {
+        return this.VelocityComponent.getValues();
+    }
+    getDrawInformations() {
+        return {
+            sprite: this.sprite,
+            x: this.CoordsComponent.x,
+            y: this.CoordsComponent.y,
+            width: this.CoordsComponent.width,
+            height: this.CoordsComponent.height,
+            canDraw: this.CollisionBox.canBeHit
+        };
+    }
+}
+exports.Tomato = Tomato;
+
+},{"./components/CollisionBox":6,"./components/CoordsComponent":7,"./components/SpeedComponent":8,"./constants":9}],6:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.CollisionBox = void 0;
+const constants_1 = require("../constants");
+// WIP
+class CollisionBox {
+    constructor(coords) {
+        this._canBeHit = true;
+        this.CoordsComponent = coords;
+    }
+    // isOverlapping(otherObject: Coords2D) {
+    // }
+    get canBeHit() {
+        return this._canBeHit;
+    }
+    handleHit() {
         this._canBeHit = false;
         setTimeout(() => {
             this._canBeHit = true;
         }, constants_1.DEFAULT_INVINCIBLE_TIME);
     }
-    collideX() {
-        return this.x <= 0;
+    collideXAxis() {
+        return this.collideScreenX() || this.collideScreenW();
     }
-    collideW() {
-        return this.x + constants_1.SPRITE_WIDTH >= constants_1.SCREEN_WIDTH;
+    collideScreenX() {
+        return this.CoordsComponent.x <= 0;
     }
-    collideY() {
-        return this.y <= 0;
+    collideScreenW() {
+        return this.CoordsComponent.x + this.CoordsComponent.width >= constants_1.SCREEN_WIDTH;
     }
-    collideH() {
-        return this.y + constants_1.SPRITE_HEIGHT >= constants_1.SCREEN_HEIGHT;
+    collideYAxis() {
+        return this.collideScreenY() || this.collideScreenH();
     }
-    getCoords() {
-        return { x: this.x, y: this.y };
+    collideScreenY() {
+        return this.CoordsComponent.y <= 0;
     }
-    getVelocity() {
-        return this.VelocityComponent.getValues();
-    }
-    __debugStop() {
-        this.VelocityComponent.stop();
-    }
-    __debugInit() {
-        this.VelocityComponent.init();
-    }
-    draw(context) {
-        if (!this.canBeHit) {
-            return;
-        }
-        context.drawImage(this.sprite, this.x, this.y, constants_1.SPRITE_WIDTH, constants_1.SPRITE_HEIGHT);
+    collideScreenH() {
+        return this.CoordsComponent.y + this.CoordsComponent.height >= constants_1.SCREEN_HEIGHT;
     }
 }
-exports.Tomato = Tomato;
+exports.CollisionBox = CollisionBox;
 
-},{"./components/SpeedComponent":6,"./constants":7}],6:[function(require,module,exports){
+},{"../constants":9}],7:[function(require,module,exports){
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.CoordsComponent = void 0;
+const constants_1 = require("../constants");
+class CoordsComponent {
+    constructor(width, height) {
+        this.x = 0;
+        this.y = 0;
+        this.width = width;
+        this.height = height;
+        this.centerOnScreen();
+    }
+    updateOnMove(newX, newY) {
+        this.x = newX;
+        this.y = newY;
+    }
+    setX(newX) {
+        this.x = newX;
+    }
+    setY(newY) {
+        this.y = newY;
+    }
+    getBounds() {
+        return {
+            x: this.x,
+            y: this.y,
+            w: this.x + this.width,
+            h: this.y + this.height
+        };
+    }
+    centerOnScreen() {
+        this.x = (constants_1.SCREEN_WIDTH / 2) - (this.width / 2);
+        this.y = (constants_1.SCREEN_HEIGHT / 2) - (this.height / 2);
+    }
+}
+exports.CoordsComponent = CoordsComponent;
+
+},{"../constants":9}],8:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SpeedComponent = void 0;
@@ -272,7 +349,7 @@ class SpeedComponent {
 }
 exports.SpeedComponent = SpeedComponent;
 
-},{"../constants":7}],7:[function(require,module,exports){
+},{"../constants":9}],9:[function(require,module,exports){
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.HIT_SOUND = exports.FAIL_SOUND = exports.DEFAULT_INVINCIBLE_TIME = exports.DEFAULT_VELOCITY_BONUS = exports.MINIMUM_SPEED = exports.TOMATO_IMAGE_URL = exports.SPRITE_HEIGHT = exports.SPRITE_WIDTH = exports.SCREEN_HEIGHT = exports.SCREEN_WIDTH = void 0;
@@ -287,20 +364,19 @@ exports.DEFAULT_INVINCIBLE_TIME = 500; // in milliseconds
 exports.FAIL_SOUND = "./assets/issou-el-risitas.mp3";
 exports.HIT_SOUND = "./assets/hit.mp3";
 
-},{}],8:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 "use strict";
 var _a;
 Object.defineProperty(exports, "__esModule", { value: true });
 const constants_1 = require("./constants");
-const HtmlRenderer_1 = require("./HtmlRenderer");
+const HtmlInterface_1 = require("./HtmlInterface");
 const Monitor_1 = require("./Monitor");
 const Player_1 = require("./Player");
 const SoundManager_1 = require("./SoundManager");
 const Tomato_1 = require("./Tomato");
-const tomato = new Tomato_1.Tomato();
+const tomato = new Tomato_1.Tomato(constants_1.SPRITE_WIDTH, constants_1.SPRITE_HEIGHT);
 const player = new Player_1.Player();
 let isPlaying = false;
-// let then = Date.now();
 let lastTime = 0;
 (_a = document.getElementById('play-btn')) === null || _a === void 0 ? void 0 : _a.addEventListener('click', () => {
     document.getElementById('play-btn').disabled = true;
@@ -308,6 +384,7 @@ let lastTime = 0;
 });
 function main() {
     initCanvasListener();
+    tomato.setSpriteSource(constants_1.TOMATO_IMAGE_URL);
     const context = getContext();
     context.fillStyle = 'black';
     gameLoop(context, 0);
@@ -317,7 +394,7 @@ function isOverlapping(mouse, tomato) {
     return mouse.x >= tomato.x && mouse.x <= tomato.x + constants_1.SPRITE_WIDTH && mouse.y >= tomato.y && mouse.y <= tomato.y + constants_1.SPRITE_HEIGHT;
 }
 function getMouseRelativeToCanvas(mouse) {
-    const canvas = HtmlRenderer_1.HTMLInterface.getQuerySelector('canvas');
+    const canvas = getCanvas();
     const canvasBox = canvas.getBoundingClientRect();
     const mouseX = mouse.clientX - canvasBox.x;
     const mouseY = mouse.clientY - canvasBox.y;
@@ -329,12 +406,12 @@ function play() {
     isPlaying = true;
 }
 function initCanvasListener() {
-    const canvas = HtmlRenderer_1.HTMLInterface.getQuerySelector('canvas');
+    const canvas = getCanvas();
     canvas.addEventListener('click', (event) => {
-        if (isPlaying && tomato.canBeHit) {
+        if (isPlaying && tomato.canBeHit()) {
             const mouseCoords = getMouseRelativeToCanvas(event);
-            const tomatoCoords = tomato.getCoords();
-            if (isOverlapping(mouseCoords, tomatoCoords)) {
+            const tomatoBounds = tomato.getBounds();
+            if (isOverlapping(mouseCoords, tomatoBounds)) {
                 const { velX, velY } = tomato.getVelocity();
                 const score = ((1 + Math.abs(velX)) * (1 + Math.abs(velY))) * 10;
                 player.hit(score);
@@ -346,15 +423,18 @@ function initCanvasListener() {
                 tomato.stop();
                 isPlaying = false;
                 player.setBestScore();
-                HtmlRenderer_1.HTMLInterface.update('b-score', String(Math.max(player.score, player.bestScore)));
+                HtmlInterface_1.HTMLInterface.update('b-score', String(Math.max(player.score, player.bestScore)));
                 document.getElementById('play-btn').disabled = false;
                 SoundManager_1.SoundManager.play(constants_1.FAIL_SOUND);
             }
         }
     });
 }
+function getCanvas() {
+    return HtmlInterface_1.HTMLInterface.getQuerySelector('canvas');
+}
 function getContext() {
-    const canvas = HtmlRenderer_1.HTMLInterface.getQuerySelector('canvas');
+    const canvas = getCanvas();
     const context = canvas.getContext("2d");
     if (!context) {
         throw new Error("context not available");
@@ -362,26 +442,20 @@ function getContext() {
     return context;
 }
 function gameLoop(context, time) {
-    // const now = Date.now();
-    // const elapsedTime = now - then;
-    // if (elapsedTime >= FPSMonitor.Interval) {
-    //   console.log(elapsedTime);
-    //   then = now - (elapsedTime % (FPSMonitor.Interval));
-    //   context!.fillRect(0, 0, 800, 600);
-    //   tomato.move(elapsedTime);
-    //   tomato.draw(context as CanvasRenderingContext2D);
-    // }
     if (lastTime != null) {
         const delta = time - lastTime;
-        // Seulement si delta > FPS.INTERVAL (1000/60) + 0.1
+        // This way we cap FPS to a maximum
         if (delta >= Monitor_1.FPSMonitor.MaxFPSInterval) {
-            context.fillRect(0, 0, 800, 600);
+            context.fillRect(0, 0, constants_1.SCREEN_WIDTH, constants_1.SCREEN_HEIGHT);
             tomato.move(delta);
-            tomato.draw(context);
+            const { sprite, x, y, width, height, canDraw } = tomato.getDrawInformations();
+            if (canDraw) {
+                context.drawImage(sprite, x, y, width, height);
+            }
             lastTime = time;
         }
     }
     window.requestAnimationFrame((time) => gameLoop(context, time));
 }
 
-},{"./HtmlRenderer":1,"./Monitor":2,"./Player":3,"./SoundManager":4,"./Tomato":5,"./constants":7}]},{},[8]);
+},{"./HtmlInterface":1,"./Monitor":2,"./Player":3,"./SoundManager":4,"./Tomato":5,"./constants":9}]},{},[10]);

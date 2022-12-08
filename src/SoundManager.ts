@@ -7,6 +7,7 @@ export class SoundManager {
     if (this.isPlaying) {
       this.player.pause();
     }
+
     this.player.src = sound;
     this.player.play();
     this.isPlaying = false;

@@ -1,3 +1,5 @@
+import { Drawable } from "./types";
+
 export class HTMLInterface {
   private constructor() { }
 
@@ -15,6 +17,16 @@ export class HTMLInterface {
     if (!tag) {
       throw new Error(`No Element corresponds to '${query}' on the DOM.`);
     }
+
     return tag;
+  }
+
+  static drawObjects(drawables: Drawable[]) {
+    for (const drawable of drawables) {
+      const { sprite, x, y, width, height, canDraw } = drawable.getDrawInformations();
+      if (canDraw) {
+        context.drawImage(sprite, x, y, width, height);
+      }
+    }
   }
 }

@@ -7,3 +7,8 @@ export interface Velocity {
   velY: number;
   velX: number;
 }
+
+export interface Drawable {
+  sprite: HTMLImageElement;
+  getDrawInformations(): any;
+}
