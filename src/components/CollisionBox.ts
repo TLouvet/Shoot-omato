@@ -1,8 +1,6 @@
 import { DEFAULT_INVINCIBLE_TIME, SCREEN_HEIGHT, SCREEN_WIDTH } from "../constants";
-// import { Coords2D } from "../types";
 import { CoordsComponent } from "./CoordsComponent";
 
-// WIP
 export class CollisionBox {
   private _canBeHit: boolean;
   private CoordsComponent: CoordsComponent;
@@ -11,10 +9,6 @@ export class CollisionBox {
     this._canBeHit = true;
     this.CoordsComponent = coords;
   }
-
-  // isOverlapping(otherObject: Coords2D) {
-
-  // }
 
   get canBeHit() {
     return this._canBeHit;

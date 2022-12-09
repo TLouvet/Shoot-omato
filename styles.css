@@ -16,6 +16,11 @@ button {
   border: none;
   background-color: green;
   color: white;
+  opacity: 0.8;
+}
+
+button:hover {
+  background-color: darkgreen;
 }
 
 button:disabled {

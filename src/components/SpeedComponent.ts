@@ -1,4 +1,4 @@
-import { DEFAULT_VELOCITY_BONUS, MINIMUM_SPEED } from "../constants";
+import { DEFAULT_VELOCITY_BONUS, MINIMUM_SPEED, RANDOM_VELOCITY } from "../constants";
 import { Velocity } from "../types";
 
 export class SpeedComponent implements Velocity {
@@ -52,7 +52,7 @@ export class SpeedComponent implements Velocity {
   }
 
   private get MaximumVelocity() {
-    return this.MinimumVelocity + Math.random() * 0.5;
+    return this.MinimumVelocity + RANDOM_VELOCITY;
   }
 
   getValues(): Velocity {

@@ -22,11 +22,21 @@ export class HTMLInterface {
   }
 
   static drawObjects(drawables: Drawable[]) {
+    const context = this.getContext();
     for (const drawable of drawables) {
       const { sprite, x, y, width, height, canDraw } = drawable.getDrawInformations();
       if (canDraw) {
         context.drawImage(sprite, x, y, width, height);
       }
     }
+  }
+
+  static getContext() {
+    const canvas = this.getQuerySelector("canvas") as HTMLCanvasElement;
+    const context = canvas.getContext("2d");
+    if (!context) {
+      throw new Error("context not available");
+    }
+    return context;
   }
 }

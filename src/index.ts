@@ -12,21 +12,32 @@ const drawables = [] as Drawable[];
 let isPlaying = false;
 let lastTime = 0;
 
-document.getElementById('play-btn')?.addEventListener('click', () => {
-  (document.getElementById('play-btn') as HTMLButtonElement).disabled = true;
-  play();
-})
-
 function main() {
+  initPlayButton();
   initCanvasListener();
   tomato.setSpriteSource(TOMATO_IMAGE_URL);
   drawables.push(tomato);
-  const context = getContext()
+  const context = HTMLInterface.getContext();
   context.fillStyle = 'black';
   gameLoop(0);
 }
 
 main();
+
+function initCanvasListener() {
+  const canvas = getCanvas();
+  canvas.addEventListener('click', (event) => {
+    if (isPlaying && tomato.canBeHit()) {
+      const mouseCoords = getMouseRelativeToCanvas(event);
+      const tomatoBounds = tomato.getBounds();
+      if (isOverlapping(mouseCoords, tomatoBounds)) {
+        handleHit();
+      } else {
+        handleEndgame();
+      }
+    }
+  })
+}
 
 function isOverlapping(mouse: Coords2D, tomato: Coords2D) {
   return mouse.x >= tomato.x && mouse.x <= tomato.x + SPRITE_WIDTH && mouse.y >= tomato.y && mouse.y <= tomato.y + SPRITE_HEIGHT;
@@ -40,64 +51,60 @@ function getMouseRelativeToCanvas(mouse: MouseEvent): Coords2D {
   return { x: mouseX, y: mouseY };
 }
 
-function play() {
-  tomato.init();
-  player.init();
-  isPlaying = true;
-}
-
-function initCanvasListener() {
-  const canvas = getCanvas();
-  canvas.addEventListener('click', (event) => {
-
-    if (isPlaying && tomato.canBeHit()) {
-      const mouseCoords = getMouseRelativeToCanvas(event);
-      const tomatoBounds = tomato.getBounds();
-
-      if (isOverlapping(mouseCoords, tomatoBounds)) {
-        const { velX, velY } = tomato.getVelocity();
-        const score = ((1 + Math.abs(velX)) * (1 + Math.abs(velY))) * 10;
-        player.hit(score);
-        tomato.takeHit();
-        SoundManager.play(HIT_SOUND);
-      } else {
-        player.resetCombo();
-        tomato.stop();
-        isPlaying = false;
-        player.setBestScore();
-        HTMLInterface.update('b-score', String(Math.max(player.score, player.bestScore)));
-        (document.getElementById('play-btn') as HTMLButtonElement).disabled = false;
-        SoundManager.play(FAIL_SOUND);
-      }
-    }
-  })
-}
-
 function getCanvas() {
   return HTMLInterface.getQuerySelector('canvas') as HTMLCanvasElement;
 }
 
-function getContext() {
-  const canvas = getCanvas();
-  const context = canvas.getContext("2d");
-  if (!context) {
-    throw new Error("context not available");
-  }
-  return context;
+function initPlayButton() {
+  const playButton = HTMLInterface.getQuerySelector('#play-btn') as HTMLButtonElement;
+  playButton.addEventListener('click', () => {
+    playButton.disabled = true;
+    play();
+  });
+}
+
+function play() {
+  tomato.init();
+  player.init();
+  HTMLInterface.update('score', String(player.score));
+  isPlaying = true;
+}
+
+function handleHit() {
+  const { velX, velY } = tomato.getVelocity();
+  const score = ((1 + Math.abs(velX)) * (1 + Math.abs(velY))) * 10;
+  player.hit(score);
+  tomato.takeHit();
+  HTMLInterface.update('score', String(player.score));
+  HTMLInterface.update('combo', String(player.combo));
+  SoundManager.play(HIT_SOUND);
+}
+
+function handleEndgame() {
+  player.resetCombo();
+  tomato.stop();
+  isPlaying = false;
+  player.setBestScore();
+  HTMLInterface.update('b-score', String(Math.max(player.score, player.bestScore)));
+  HTMLInterface.update('combo', String(player.combo));
+  (document.getElementById('play-btn') as HTMLButtonElement).disabled = false;
+  SoundManager.play(FAIL_SOUND);
 }
 
 function gameLoop(time: number) {
-  const context = getContext();
-
   if (lastTime != null) {
     const delta = time - lastTime;
-    // This way we cap FPS to a maximum
     if (delta >= FPSMonitor.MaxFPSInterval) {
-      context.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
-      tomato.move(delta);
-      HTMLInterface.drawObjects(drawables)
+      draw(delta);
       lastTime = time;
     }
   }
   window.requestAnimationFrame(gameLoop);
+}
+
+function draw(delta: number) {
+  const context = HTMLInterface.getContext();
+  context.fillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
+  tomato.move(delta);
+  HTMLInterface.drawObjects(drawables)
 }
